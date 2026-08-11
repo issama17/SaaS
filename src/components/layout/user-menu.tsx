@@ -1,5 +1,3 @@
-"use client";
-
 import {
   BellIcon,
   CreditCardIcon,
@@ -8,7 +6,7 @@ import {
   UserIcon,
 } from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,23 +17,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { logoutAction } from "@/lib/auth/actions";
+import type { SessionUser } from "@/lib/auth/session";
 
-const user = {
-  name: "Jane Doe",
-  email: "jane@acme.com",
-  avatar: "",
-};
-
-function initials(name: string) {
-  return name
-    .split(" ")
+function initials(name: string | null, email: string) {
+  const source = name?.trim() || email;
+  const parts = source.split(/[\s.@_-]+/).filter(Boolean);
+  return parts
+    .slice(0, 2)
     .map((part) => part[0])
     .join("")
-    .slice(0, 2)
     .toUpperCase();
 }
 
-export function UserMenu() {
+export function UserMenu({ user }: { user: SessionUser }) {
+  const label = user.name ?? user.email;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -44,26 +41,24 @@ export function UserMenu() {
             variant="ghost"
             size="icon"
             className="rounded-full"
-            aria-label="Menu du profil"
+            aria-label={`Menu du profil de ${label}`}
           />
         }
       >
         <Avatar size="sm">
-          <AvatarImage src={user.avatar} alt={user.name} />
-          <AvatarFallback>{initials(user.name)}</AvatarFallback>
+          <AvatarFallback>{initials(user.name, user.email)}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-60">
         <div className="flex items-center gap-2 px-1.5 py-1.5">
           <Avatar size="sm">
-            <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback>{initials(user.name)}</AvatarFallback>
+            <AvatarFallback>{initials(user.name, user.email)}</AvatarFallback>
           </Avatar>
-          <div className="grid flex-1 leading-tight">
-            <span className="truncate text-sm font-medium">{user.name}</span>
+          <div className="grid min-w-0 flex-1 leading-tight">
+            <span className="truncate text-sm font-medium">{label}</span>
             <span className="truncate text-xs text-muted-foreground">
-              {user.email}
+              {user.jobTitle ?? user.email}
             </span>
           </div>
         </div>
@@ -92,10 +87,17 @@ export function UserMenu() {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem variant="destructive">
-          <LogOutIcon />
-          Se déconnecter
-        </DropdownMenuItem>
+        {/* Déconnexion en POST via une server action : un GET serait
+            déclenchable par un simple lien ou un préchargement. */}
+        <form action={logoutAction}>
+          <DropdownMenuItem
+            variant="destructive"
+            render={<button type="submit" className="w-full" />}
+          >
+            <LogOutIcon />
+            Se déconnecter
+          </DropdownMenuItem>
+        </form>
       </DropdownMenuContent>
     </DropdownMenu>
   );

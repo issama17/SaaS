@@ -75,6 +75,48 @@ page revient à créer `src/app/(app)/<route>/page.tsx` et à l'inscrire dans
 Un futur groupe `(auth)` peut vivre à côté de `(app)` pour les écrans sans
 sidebar (connexion, inscription).
 
+## Authentification
+
+Sessions serveur maison, sans dépendance d'authentification : Server Actions +
+cookie opaque + table `Session`. Le choix face à Auth.js tient à une chose —
+une session en base est **révocable**, là où un JWT autoporteur reste valide
+jusqu'à son expiration même après déconnexion.
+
+| Fichier | Rôle |
+| --- | --- |
+| `src/lib/auth/password.ts` | scrypt (N=32768, r=8), sel par mot de passe, comparaison à temps constant |
+| `src/lib/auth/session.ts` | création / lecture / destruction de session, `requireUser()` |
+| `src/lib/auth/actions.ts` | Server Actions `loginAction` et `logoutAction` |
+| `src/middleware.ts` | redirection rapide des anonymes vers `/login?next=…` |
+| `src/app/(auth)/login/` | page de connexion |
+
+Ce qui protège réellement les pages, c'est `requireUser()` dans
+`src/app/(app)/layout.tsx` : toute route sous `(app)` traverse ce layout. Le
+middleware ne regarde que la *présence* du cookie — un jeton forgé le franchit
+et se fait rejeter juste après, en base.
+
+Détails qui comptent :
+
+- Le cookie porte un jeton aléatoire de 32 octets ; la base n'en stocke que le
+  SHA-256. Un accès en lecture à la table ne permet pas de rejouer les sessions.
+- `httpOnly`, `SameSite=Lax`, `Secure` par défaut — désactivable en local via
+  `SESSION_COOKIE_SECURE="false"`, jamais en production.
+- Un e-mail inconnu déclenche quand même un calcul scrypt : même message, même
+  temps de réponse, donc pas d'énumération des comptes.
+- Cinq tentatives par e-mail et par tranche de dix minutes. Le compteur est en
+  mémoire du processus : à déporter dans Redis ou en base pour du multi-instance.
+- La déconnexion passe par un POST (Server Action) : un GET serait déclenchable
+  par un simple lien ou un préchargement.
+- Un compte sans `passwordHash` (invité) ne peut pas se connecter par
+  identifiants.
+
+Comptes de démonstration créés par le seed, mot de passe `Outpost!Demo2026` :
+`jane.doe@vasseur-industries.fr` (propriétaire),
+`karim.benali@vasseur-industries.fr` (analyste), et
+`audit@cabinet-externe.fr` (invité sans mot de passe, connexion refusée). Le
+bloc qui affiche ces identifiants sur `/login` est à retirer avant toute mise
+en production.
+
 ## Design
 
 Le produit est **pensé en sombre** : `defaultTheme="dark"`, palette bleu de nuit
@@ -105,9 +147,13 @@ Prisma 7 + PostgreSQL (Supabase). Le client généré est git-ignoré et recré�
 ```bash
 cp .env.example .env      # puis renseignez DATABASE_URL / DIRECT_URL
 npm run db:generate       # régénère le client
-npm run db:migrate        # première migration (pas encore exécutée)
+npm run db:deploy         # applique les migrations
+npm run db:seed           # crée le tenant et les comptes de démonstration
 npm run db:studio
 ```
+
+`DATABASE_URL` doit aussi être défini dans l'environnement de build (Vercel) :
+le client Prisma est instancié au chargement du module et échoue sans elle.
 
 Chaîne de découverte :
 
