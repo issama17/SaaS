@@ -3,9 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CommandIcon } from "lucide-react";
+import { RadarIcon } from "lucide-react";
 
-import { appName, navGroups } from "@/config/nav";
+import { appName, appTagline, navGroups } from "@/config/nav";
+import { dataLeaks, organization, summary } from "@/lib/mock/easm";
 import {
   Sidebar,
   SidebarContent,
@@ -15,10 +16,17 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+
+/** Compteurs d'éléments à traiter, dérivés des mêmes données que le dashboard. */
+const badges: Record<string, number> = {
+  "/vulnerabilities": summary.criticalCount + summary.highCount,
+  "/data-leaks": dataLeaks.length,
+};
 
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -34,12 +42,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<Link href="/" />}>
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <CommandIcon className="size-4" />
+                <RadarIcon className="size-4" />
               </div>
               <div className="grid flex-1 text-left leading-tight">
-                <span className="truncate font-medium">{appName}</span>
+                <span className="truncate font-semibold">{appName}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  Plan Pro
+                  {appTagline}
                 </span>
               </div>
             </SidebarMenuButton>
@@ -63,6 +71,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <item.icon />
                       <span>{item.title}</span>
                     </SidebarMenuButton>
+                    {badges[item.href] ? (
+                      <SidebarMenuBadge className="tabular-nums">
+                        {badges[item.href]}
+                      </SidebarMenuBadge>
+                    ) : null}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
@@ -72,10 +85,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="rounded-lg bg-sidebar-accent p-3 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
-          <p className="text-sm font-medium">Passez au plan Business</p>
-          <p className="mt-1 text-xs text-sidebar-accent-foreground/70">
-            Sièges illimités et support prioritaire.
+        <div className="glass rounded-lg p-3 group-data-[collapsible=icon]:hidden">
+          <p className="truncate text-sm font-medium">{organization.name}</p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            Plan {organization.plan} · {organization.employeeCount} salariés
           </p>
         </div>
       </SidebarFooter>

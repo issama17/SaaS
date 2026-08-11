@@ -17,10 +17,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Acme SaaS",
-    template: "%s · Acme SaaS",
+    default: "Outpost — External Attack Surface",
+    template: "%s · Outpost",
   },
-  description: "Un starter SaaS construit avec Next.js, Tailwind CSS et shadcn/ui.",
+  description:
+    "Gestion de la surface d'attaque externe et threat intelligence pour les PME.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -31,10 +32,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
+        {/* Le produit est pensé en sombre : c'est le thème par défaut, le
+            clair reste disponible via la bascule du header. */}
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
           <TooltipProvider>{children}</TooltipProvider>

@@ -46,6 +46,20 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Sévérités — palette de statut fixe (jamais réutilisée comme couleur de
+     série). Toujours accompagnée d'un libellé ou d'une icône : la teinte ne
+     porte jamais seule le sens. */
+  --color-critical: var(--sev-critical);
+  --color-high: var(--sev-high);
+  --color-medium: var(--sev-medium);
+  --color-low: var(--sev-low);
+  --color-info: var(--sev-info);
+
+  /* Encre et grille des graphiques. */
+  --color-viz-series: var(--viz-series);
+  --color-viz-grid: var(--viz-grid);
+  --color-viz-axis: var(--viz-axis);
 }
 
 :root {
@@ -81,40 +95,69 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Statuts de sévérité — hex fixes, identiques dans les deux thèmes. */
+  --sev-critical: #d03b3b;
+  --sev-high: #ec835a;
+  --sev-medium: #fab219;
+  --sev-low: #0ca30c;
+  --sev-info: #52514e;
+
+  --viz-series: #2a78d6;
+  --viz-grid: rgba(11, 11, 11, 0.08);
+  --viz-axis: rgba(11, 11, 11, 0.18);
+
+  /* Glassmorphism (thème clair : voile blanc sur fond pâle). */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(11, 11, 11, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.9);
+  --glass-shadow: 0 1px 2px rgba(11, 11, 11, 0.04), 0 8px 24px rgba(11, 11, 11, 0.06);
 }
 
+/* Thème sombre — le mode par défaut du produit : bleu de nuit profond, accent
+   cyan, surfaces translucides. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --background: oklch(0.16 0.018 260);
+  --foreground: oklch(0.97 0.005 250);
+  --card: oklch(0.215 0.021 259);
+  --card-foreground: oklch(0.97 0.005 250);
+  --popover: oklch(0.205 0.021 259);
+  --popover-foreground: oklch(0.97 0.005 250);
+  --primary: oklch(0.8 0.132 196);
+  --primary-foreground: oklch(0.19 0.03 245);
+  --secondary: oklch(0.27 0.022 258);
+  --secondary-foreground: oklch(0.97 0.005 250);
+  --muted: oklch(0.26 0.02 258);
+  --muted-foreground: oklch(0.72 0.022 254);
+  --accent: oklch(0.3 0.028 253);
+  --accent-foreground: oklch(0.97 0.005 250);
+  --destructive: oklch(0.62 0.19 24);
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.8 0.132 196);
+  --chart-1: oklch(0.8 0.132 196);
+  --chart-2: oklch(0.62 0.16 258);
+  --chart-3: oklch(0.7 0.15 60);
+  --chart-4: oklch(0.62 0.19 24);
+  --chart-5: oklch(0.68 0.16 150);
+  --sidebar: oklch(0.185 0.02 260);
+  --sidebar-foreground: oklch(0.97 0.005 250);
+  --sidebar-primary: oklch(0.8 0.132 196);
+  --sidebar-primary-foreground: oklch(0.19 0.03 245);
+  --sidebar-accent: oklch(0.28 0.025 256);
+  --sidebar-accent-foreground: oklch(0.97 0.005 250);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.8 0.132 196);
+
+  --viz-series: #3987e5;
+  --viz-grid: rgba(255, 255, 255, 0.07);
+  --viz-axis: rgba(255, 255, 255, 0.16);
+
+  --glass-bg: rgba(255, 255, 255, 0.045);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-highlight: rgba(255, 255, 255, 0.16);
+  --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 18px 40px -24px rgba(0, 0, 0, 0.9);
 }
 
 @layer base {
@@ -126,5 +169,72 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer components {
+  /* Surface vitrée : voile translucide + flou d'arrière-plan + liseré
+     lumineux sur l'arête haute. */
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    position: relative;
+  }
+
+  .glass::before {
+    content: "";
+    position: absolute;
+    inset-inline: 1px;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--glass-highlight),
+      transparent
+    );
+    pointer-events: none;
+  }
+
+  /* Halos d'ambiance derrière l'application. Purement décoratif, donc retiré
+     des lecteurs d'écran via aria-hidden côté composant. */
+  .aurora {
+    background:
+      radial-gradient(
+        60rem 30rem at 12% -10%,
+        color-mix(in oklab, var(--primary) 18%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        45rem 28rem at 92% 0%,
+        color-mix(in oklab, var(--chart-2) 16%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        50rem 30rem at 60% 110%,
+        color-mix(in oklab, var(--chart-5) 10%, transparent),
+        transparent 65%
+      );
+  }
+
+  /* Trame technique discrète, pour les en-têtes de section. */
+  .grid-lines {
+    background-image:
+      linear-gradient(to right, var(--viz-grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--viz-grid) 1px, transparent 1px);
+    background-size: 3rem 3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

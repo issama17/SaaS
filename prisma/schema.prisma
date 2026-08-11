@@ -1,0 +1,349 @@
+// Prisma schema — https://pris.ly/d/prisma-schema
+//
+// Domaine : EASM (External Attack Surface Management) + Threat Intelligence.
+//
+// Chaîne de découverte :
+//   Organization → TargetDomain → Asset → Vulnerability
+//                              ↘ DataLeak
+//                              ↘ Scan (job) ↘ RiskSnapshot (historique du score)
+//
+// La connexion est déclarée dans prisma.config.ts (DATABASE_URL / DIRECT_URL).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  ANALYST
+  VIEWER
+}
+
+/// Note d'exposition d'un périmètre, façon rating agency (A = excellent, F = critique).
+enum SecurityGrade {
+  A
+  B
+  C
+  D
+  F
+}
+
+enum MonitoringStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum AssetType {
+  DOMAIN
+  SUBDOMAIN
+  IP_ADDRESS
+  SERVICE
+  TLS_CERTIFICATE
+  CLOUD_STORAGE
+  MAIL_SERVER
+  CODE_REPOSITORY
+}
+
+enum ExposureLevel {
+  INTERNET_FACING
+  RESTRICTED
+  INTERNAL
+  UNKNOWN
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum FindingStatus {
+  OPEN
+  TRIAGED
+  IN_PROGRESS
+  RESOLVED
+  ACCEPTED_RISK
+  FALSE_POSITIVE
+}
+
+enum ScanType {
+  DISCOVERY
+  VULNERABILITY
+  LEAK_MONITORING
+  FULL
+}
+
+enum ScanStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+/// Provenance d'une fuite d'identifiants.
+enum LeakSource {
+  BREACH_DUMP
+  COMBOLIST
+  STEALER_LOG
+  PASTE_SITE
+  RANSOMWARE_BLOG
+  DARK_WEB_MARKET
+}
+
+// ---------------------------------------------------------------------------
+// Comptes & tenants
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+
+  memberships    OrganizationMember[]
+  ownedOrgs      Organization[]       @relation("OrganizationOwner")
+  addedTargets   TargetDomain[]       @relation("TargetAddedBy")
+  assignedVulns  Vulnerability[]      @relation("VulnerabilityAssignee")
+  triggeredScans Scan[]               @relation("ScanTriggeredBy")
+
+  @@map("users")
+}
+
+/// Le tenant : la PME dont on surveille la surface d'attaque.
+model Organization {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  industry      String?
+  employeeCount Int?
+  createdAt     DateTime @default(now())
+
+  ownerId String
+  owner   User   @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  members   OrganizationMember[]
+  targets   TargetDomain[]
+  snapshots RiskSnapshot[]
+
+  @@index([ownerId])
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id       String     @id @default(cuid())
+  role     MemberRole @default(ANALYST)
+  joinedAt DateTime   @default(now())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+// ---------------------------------------------------------------------------
+// Surface d'attaque
+// ---------------------------------------------------------------------------
+
+/// Un périmètre surveillé : le domaine racine déclaré par le client.
+model TargetDomain {
+  id                String           @id @default(cuid())
+  domain            String
+  label             String?
+  status            MonitoringStatus @default(PENDING_VERIFICATION)
+  /// Jeton DNS TXT prouvant la possession du domaine avant tout scan actif.
+  verificationToken String?
+  verifiedAt        DateTime?
+  /// Score de risque 0–100 (100 = sain), dérivé des findings ouverts.
+  riskScore         Int              @default(0)
+  grade             SecurityGrade    @default(C)
+  tags              String[]         @default([])
+  lastScanAt        DateTime?
+  nextScanAt        DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  addedById String?
+  addedBy   User?   @relation("TargetAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+
+  assets          Asset[]
+  vulnerabilities Vulnerability[]
+  dataLeaks       DataLeak[]
+  scans           Scan[]
+  snapshots       RiskSnapshot[]
+
+  @@unique([organizationId, domain])
+  @@index([status])
+  @@map("target_domains")
+}
+
+/// Tout ce que la découverte remonte sous un périmètre : sous-domaine, IP,
+/// service exposé, certificat, bucket…
+model Asset {
+  id           String        @id @default(cuid())
+  type         AssetType
+  value        String
+  ipAddress    String?
+  port         Int?
+  /// Service et bannière détectés (ex. "nginx", "1.24.0").
+  service      String?
+  product      String?
+  version      String?
+  exposure     ExposureLevel @default(UNKNOWN)
+  country      String?
+  asn          String?
+  /// Expiration du certificat TLS quand l'actif en présente un.
+  tlsExpiresAt DateTime?
+  isActive     Boolean       @default(true)
+  firstSeenAt  DateTime      @default(now())
+  lastSeenAt   DateTime      @default(now())
+
+  targetId String
+  target   TargetDomain @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  vulnerabilities Vulnerability[]
+
+  @@unique([targetId, value, port])
+  @@index([targetId, type])
+  @@index([exposure])
+  @@map("assets")
+}
+
+// ---------------------------------------------------------------------------
+// Findings
+// ---------------------------------------------------------------------------
+
+model Vulnerability {
+  id               String        @id @default(cuid())
+  cveId            String?
+  title            String
+  description      String?
+  severity         Severity
+  /// CVSS v3.1 base score (0–10).
+  cvssScore        Float?
+  cvssVector       String?
+  /// EPSS : probabilité d'exploitation à 30 jours (0–1). Prioritise mieux que le CVSS seul.
+  epssScore        Float?
+  /// Présent au catalogue CISA KEV : exploitation confirmée dans la nature.
+  isKnownExploited Boolean       @default(false)
+  status           FindingStatus @default(OPEN)
+  remediation      String?
+  references       String[]      @default([])
+  detectedAt       DateTime      @default(now())
+  resolvedAt       DateTime?
+  /// SLA de remédiation calculé à la détection selon la sévérité.
+  dueAt            DateTime?
+
+  targetId String
+  target   TargetDomain @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  assetId String?
+  asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  assignedToId String?
+  assignedTo   User?   @relation("VulnerabilityAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([targetId, status])
+  @@index([severity, status])
+  @@index([cveId])
+  @@map("vulnerabilities")
+}
+
+/// Identifiant d'entreprise retrouvé dans une fuite ou un stealer log.
+model DataLeak {
+  id              String        @id @default(cuid())
+  email           String
+  source          LeakSource
+  breachName      String
+  /// Ce qui est exposé : "password_plaintext", "bcrypt_hash", "session_cookie"…
+  exposedData     String[]      @default([])
+  passwordExposed Boolean       @default(false)
+  severity        Severity
+  status          FindingStatus @default(OPEN)
+  recordCount     Int?
+  occurredAt      DateTime?
+  discoveredAt    DateTime      @default(now())
+
+  targetId String
+  target   TargetDomain @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@index([targetId, status])
+  @@index([email])
+  @@map("data_leaks")
+}
+
+// ---------------------------------------------------------------------------
+// Exécution & historique
+// ---------------------------------------------------------------------------
+
+model Scan {
+  id               String     @id @default(cuid())
+  type             ScanType
+  status           ScanStatus @default(QUEUED)
+  engine           String?
+  queuedAt         DateTime   @default(now())
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  durationSec      Int?
+  assetsDiscovered Int        @default(0)
+  findingsFound    Int        @default(0)
+  newFindings      Int        @default(0)
+  errorMessage     String?
+
+  targetId String
+  target   TargetDomain @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  triggeredById String?
+  triggeredBy   User?   @relation("ScanTriggeredBy", fields: [triggeredById], references: [id], onDelete: SetNull)
+
+  @@index([targetId, status])
+  @@index([queuedAt])
+  @@map("scans")
+}
+
+/// Photo quotidienne du risque : alimente les courbes de tendance du dashboard.
+model RiskSnapshot {
+  id            String        @id @default(cuid())
+  capturedAt    DateTime
+  riskScore     Int
+  grade         SecurityGrade
+  criticalCount Int           @default(0)
+  highCount     Int           @default(0)
+  mediumCount   Int           @default(0)
+  lowCount      Int           @default(0)
+  leakCount     Int           @default(0)
+  exposedAssets Int           @default(0)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Null = agrégat de toute l'organisation.
+  targetId String?
+  target   TargetDomain? @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, targetId, capturedAt])
+  @@index([capturedAt])
+  @@map("risk_snapshots")
+}
