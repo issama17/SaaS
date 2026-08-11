@@ -110,11 +110,18 @@ enum LeakSource {
 // ---------------------------------------------------------------------------
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
+  id    String  @id @default(cuid())
+  email String  @unique
+  name  String?
+  /// Empreinte scrypt du mot de passe, au format `scrypt$N$r$p$sel$clé`.
+  /// Null pour un compte invité qui n'a pas encore choisi de mot de passe :
+  /// la connexion par identifiants lui est alors refusée.
+  passwordHash String?
+  jobTitle     String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
 
+  sessions       Session[]
   memberships    OrganizationMember[]
   ownedOrgs      Organization[]       @relation("OrganizationOwner")
   addedTargets   TargetDomain[]       @relation("TargetAddedBy")
@@ -122,6 +129,26 @@ model User {
   triggeredScans Scan[]               @relation("ScanTriggeredBy")
 
   @@map("users")
+}
+
+/// Session serveur. Le cookie ne transporte qu'un jeton opaque et c'est son
+/// empreinte SHA-256 qui est stockée : un accès en lecture à la table ne
+/// permet pas de rejouer les sessions. La déconnexion supprime la ligne, donc
+/// une session révoquée l'est réellement — contrairement à un JWT autoporteur.
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+  ipAddress String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
 }
 
 /// Le tenant : la PME dont on surveille la surface d'attaque.

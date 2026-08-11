@@ -42,13 +42,6 @@ export const organization = {
   plan: "Business",
 };
 
-export const currentUser = {
-  id: "usr_jdoe",
-  name: "Jane Doe",
-  email: "jane.doe@vasseur-industries.fr",
-  role: "Responsable SSI",
-};
-
 // ---------------------------------------------------------------------------
 // Périmètres surveillés
 // ---------------------------------------------------------------------------
