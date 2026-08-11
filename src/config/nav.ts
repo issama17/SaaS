@@ -1,11 +1,12 @@
 import {
-  ChartColumnIcon,
   CreditCardIcon,
-  FolderIcon,
+  FileTextIcon,
+  KeyRoundIcon,
   LayoutDashboardIcon,
-  LifeBuoyIcon,
+  NetworkIcon,
+  RadarIcon,
   SettingsIcon,
-  UsersIcon,
+  ShieldAlertIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -20,24 +21,30 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-export const appName = "Acme SaaS";
+export const appName = "Outpost";
+export const appTagline = "External Attack Surface";
 
 export const navGroups: NavGroup[] = [
   {
-    label: "Général",
+    label: "Surveillance",
     items: [
       { title: "Dashboard", href: "/", icon: LayoutDashboardIcon },
-      { title: "Projets", href: "/projects", icon: FolderIcon },
-      { title: "Analytics", href: "/analytics", icon: ChartColumnIcon },
-      { title: "Clients", href: "/customers", icon: UsersIcon },
+      { title: "Surface d'attaque", href: "/attack-surface", icon: NetworkIcon },
+      {
+        title: "Vulnérabilités",
+        href: "/vulnerabilities",
+        icon: ShieldAlertIcon,
+      },
+      { title: "Fuites de données", href: "/data-leaks", icon: KeyRoundIcon },
+      { title: "Scans", href: "/scans", icon: RadarIcon },
     ],
   },
   {
-    label: "Compte",
+    label: "Pilotage",
     items: [
+      { title: "Rapports", href: "/reports", icon: FileTextIcon },
       { title: "Facturation", href: "/billing", icon: CreditCardIcon },
       { title: "Paramètres", href: "/settings", icon: SettingsIcon },
-      { title: "Support", href: "/support", icon: LifeBuoyIcon },
     ],
   },
 ];
